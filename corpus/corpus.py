@@ -8,8 +8,8 @@ from gensim.corpora.dictionary import Dictionary
 from smart_open import smart_open
 from utils import to_unicode
 
-def word2idx(sents, word2idx):
-    return [[word2idx[w] for w in s if w in word2idx] for s in sents] 
+def word2idx(sents, dict):
+    return [[dict[w] for w in s if w in dict] for s in sents] 
 
 def find_classes(dir):
     classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]

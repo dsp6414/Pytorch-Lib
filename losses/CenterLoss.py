@@ -28,7 +28,7 @@ class CenterLoss(nn.Module):
         targets_ = list(set(targets.data))
         num_class = len(targets_)
 
-        targets_ = Variable(torch.LongTensor(targets_))
+        targets_ = Variable(torch.IntTensor(targets_))
         mask_ = targets.repeat(num_class, 1).eq(targets_.repeat(n, 1).t())
         centers = []
         inputs_list = []

@@ -1,10 +1,15 @@
+import _init_paths
+
 import argparse
 import time
 
+
 import torch
 from torch.autograd import Variable
+from torch.optim import Adam,SGD
 import torch.nn as nn
-import nlp
+import utils
+from utils.Text import load_word_embeddings
 
 
 
@@ -65,7 +70,7 @@ validation_data = DataLoader(
               shuffle=False,
               cuda=use_cuda)
 
-emb = nlp.load_pre_w2c('F:\\My Research\\最近研究\\Pytorch\\PythonApplication1\\PythonApplication1\\glove.6B\\glove.6B.300d.txt',data['dict']['train'])
+emb = load_word_embeddings(data['dict']['train'],'F:\\My Research\\最近研究\\Pytorch\\PythonApplication1\\PythonApplication1\\glove.6B\\glove.6B.300d.txt',300)
 args.emb = emb
 
 # ##############################################################################

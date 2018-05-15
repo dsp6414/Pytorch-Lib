@@ -30,16 +30,16 @@ class SoftmaxNeigLoss(nn.Module):
     def __init__(self, alpha=50):
         super(SoftmaxNeigLoss, self).__init__()
         self.alpha = alpha
-        self.ranking_loss = nn.MarginRankingLoss(margin=self.margin)
+        self.ranking_loss = nn.MarginRankingLoss(margin=self.alpha)
 
     def forward(self, inputs, targets):
         n = inputs.size(0)
         # Compute pairwise distance, replace by the official when merged
         dist_mat = euclidean_dist(inputs)
-        targets = targets.cuda()
+        #targets = targets.cuda()
         # split the positive and negative pairs
-        eyes_ = Variable(torch.eye(n, n)).cuda()
-        # eyes_ = Variable(torch.eye(n, n))
+        #eyes_ = Variable(torch.eye(n, n)).cuda()
+        eyes_ = Variable(torch.eye(n, n))
         pos_mask = targets.expand(n, n).eq(targets.expand(n, n).t())
         neg_mask = eyes_.eq(eyes_) - pos_mask
         pos_mask = pos_mask - eyes_.eq(1)
@@ -98,7 +98,7 @@ def main():
     y_ = 8*list(range(num_class))
     targets = Variable(torch.IntTensor(y_))
 
-    print(SoftmaxNeigLoss(margin=0.1)(inputs, targets))
+    print(SoftmaxNeigLoss(alpha=0.1)(inputs, targets))
 
 
 if __name__ == '__main__':

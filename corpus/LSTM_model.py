@@ -27,7 +27,7 @@ class LSTM_Text(nn.Module):
                     
         self.num_directions = 2 if self.bidirectional else 1
 
-        self.lookup_table = nn.Embedding(self.vocab_size+1, self.embed_dim,
+        self.lookup_table = nn.Embedding(self.vocab_size, self.embed_dim,
                                 padding_idx=const.PAD)
         self.lookup_table.weight.data.copy_(torch.from_numpy(self.emb))
         self.lstm = nn.LSTM(self.embed_dim,

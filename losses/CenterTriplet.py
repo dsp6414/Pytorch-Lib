@@ -40,7 +40,8 @@ class CenterTripletLoss(nn.Module):
         targets_ = list(set(targets.data))
         num_class = len(targets_)
 
-        targets_ = Variable(torch.LongTensor(targets_)).cuda()
+        #targets_ = Variable(torch.LongTensor(targets_)).cuda() #cuda
+        targets_ = Variable(torch.LongTensor(targets_))
         mask_ = targets.repeat(num_class, 1).eq(targets_.repeat(n, 1).t())
         # print(mask_.size())
         _mask = Variable(torch.ByteTensor(num_class, n).fill_(1)).cuda() - mask_

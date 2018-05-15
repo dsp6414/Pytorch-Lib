@@ -16,6 +16,7 @@ def euclidean_dist(inputs_):
     return dist
 
 
+
 class BatchAllLoss(nn.Module):
     def __init__(self, margin=0.2):
         super(BatchAllLoss, self).__init__()

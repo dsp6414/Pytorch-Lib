@@ -81,7 +81,6 @@ class MarginPositiveLoss(nn.Module):
             neg_pair = torch.sort(neg_pair)[0]
             # positive selection 
             pos_pair = torch.masked_select(pos_pair, pos_pair < neg_pair[-1] + 0.05)
-	
             if len(pos_pair) < 1:
                 c += 1
                 continue

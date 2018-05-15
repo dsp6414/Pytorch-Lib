@@ -3,6 +3,58 @@ from __future__ import absolute_import
 import torch
 from torch import nn
 from torch.autograd import Variable
+import numpy as np
+
+def l2_norm(self,input):
+    input_size = input.size()
+    buffer = torch.pow(input, 2)
+
+    normp = torch.sum(buffer, 1).add_(1e-10)
+    norm = torch.sqrt(normp)
+
+    _output = torch.div(input, norm.view(-1, 1).expand_as(input))
+
+    output = _output.view(input_size)
+
+    return output
+
+
+def linf_dist(x, y):
+    return np.linalg.norm(x.flatten() - y.flatten(), ord=np.inf)
+
+def l2_dist(x, y):
+    return np.linalg.norm(x.flatten() - y.flatten(), ord=2)
+
+def l1_dist(x, y):
+    return np.linalg.norm(x.flatten() - y.flatten(), ord=1)
+
+def l0_dist(x, y):
+    return np.linalg.norm(x.flatten() - y.flatten(), ord=0)
+
+def euclidean_dist(x, y):
+  """
+  Args:
+    x: pytorch Variable, with shape [m, d]
+    y: pytorch Variable, with shape [n, d]
+  Returns:
+    dist: pytorch Variable, with shape [m, n]
+  """
+  m, n = x.size(0), y.size(0)
+  xx = torch.pow(x, 2).sum(1, keepdim=True).expand(m, n)
+  yy = torch.pow(y, 2).sum(1, keepdim=True).expand(n, m).t()
+  dist = xx + yy
+  dist.addmm_(1, -2, x, y.t())
+  dist = dist.clamp(min=1e-12).sqrt()  # for numerical stability
+  return dist
+
+def euclidean_dist_self(inputs_):
+    # Compute pairwise distance, replace by the official when merged
+    n = inputs_.size(0)
+    dist = torch.pow(inputs_, 2).sum(dim=1, keepdim=True).expand(n, n)
+    dist = dist + dist.t()
+    dist.addmm_(1, -2, inputs_, inputs_.t())
+    dist = dist.clamp(min=1e-12).sqrt()  # for numerical stability
+    return dist
 
 class GramMatrix(nn.Module):
     def __init__(self):

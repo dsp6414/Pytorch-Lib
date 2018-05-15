@@ -34,10 +34,10 @@ class DistWeightBinDevianceLoss(nn.Module):
         # Compute similarity matrix
         sim_mat = similarity(inputs)
         # print(sim_mat)
-        targets = targets.cuda()
+        #targets = targets.cuda()
         # split the positive and negative pairs
-        eyes_ = Variable(torch.eye(n, n)).cuda()
-        # eyes_ = Variable(torch.eye(n, n))
+        #eyes_ = Variable(torch.eye(n, n)).cuda()
+        eyes_ = Variable(torch.eye(n, n))
         pos_mask = targets.expand(n, n).eq(targets.expand(n, n).t())
         neg_mask = eyes_.eq(eyes_) - pos_mask
         pos_mask = pos_mask - eyes_.eq(1)
