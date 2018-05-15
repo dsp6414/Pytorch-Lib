@@ -8,6 +8,69 @@ import glob
 if sys.version_info[0] >= 3:
     unicode = str
 
+
+if sys.version_info >= (3,3):
+    dashes = ["–", "--+"]
+    for i in range(8208, 8214):
+        dashes.append(chr(i))
+else:
+    dashes = [u"–", u"--+"]
+    for i in range(8208, 8214):
+        dashes.append(unichr(i))
+
+
+UNDECIDED = 0
+SHOULD_SPLIT = 1
+SHOULD_NOT_SPLIT = 2
+
+people = [
+    "jr", "mr", "ms", "mrs", "dr", "prof", "esq", "sr",
+    "sen", "sens", "rep", "reps", "gov", "attys", "attys",
+    "supt", "det", "mssrs", "rev", "fr", "ss", "msgr"
+]
+army   = ["col", "gen", "lt", "cmdr", "adm", "capt", "sgt", "cpl", "maj", "brig", "pt"]
+inst   = ["dept","univ", "assn", "bros", "ph.d"]
+place  = [
+    "arc", "al", "ave", "blvd", "bld", "cl", "ct",
+    "cres", "exp", "expy", "dist", "mt", "mtn", "ft",
+    "fy", "fwy", "hwy", "hway", "la", "pde", "pd","plz", "pl", "rd", "st",
+    "tce"
+]
+comp   = ["mfg", "inc", "ltd", "co", "corp"]
+state  = [
+    "ala","ariz","ark","cal","calif","colo","col","conn",
+    "del","fed","fla","ga","ida","id","ill","ind","ia","kans",
+    "kan","ken","ky","la","me","md","is","mass","mich","minn",
+    "miss","mo","mont","neb","nebr","nev","mex","okla","ok",
+    "ore","penna","penn","pa","dak","tenn","tex","ut","vt",
+    "va","wash","wis","wisc","wy","wyo","usafa","alta",
+    "man","ont","que","sask","yuk"
+]
+month  = [
+    "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep",
+    "sept", "oct", "nov", "dec"
+]
+misc = ["vs", "etc", "no","esp", "ed", "iv", "Oper", "op", "i.e", "e.g", "v"]
+website = ["www"]
+currency = ["rs"]
+ABBR = {}
+# create a hash of these abbreviations:
+for abbreviation_type in [people, army, inst, place, comp, state, month, misc, website, currency]:
+    for abbreviation in abbreviation_type:
+        ABBR[abbreviation] = True
+
+MONTHS = {
+    "january", "february", "march", "april", "may",
+    "june", "july", "august", "september", "october",
+    "november", "december"
+}
+PUNCT_SYMBOLS = {'.', "...", "?", "!", "..", "!!", "??", "!?", "?!", u"…"}
+CONTINUE_PUNCT_SYMBOLS = {';', ',', '-', ':'} | set(dashes)
+OPENING_SYMBOLS = {'(', '[', '"', '{', '“'}
+CLOSING_SYMBOLS = {')', ']', '"', '}', '”'}
+CLOSE_2_OPEN = {')':'(', ']': '[', '"':'"', '}':'{', '”':'“'}
+
+
 STOPWORDS = frozenset([
     'all', 'six', 'just', 'less', 'being', 'indeed', 'over', 'move', 'anyway', 'four', 'not', 'own', 'through',
     'using', 'fify', 'where', 'mill', 'only', 'find', 'before', 'one', 'whose', 'system', 'how', 'somewhere',
@@ -40,6 +103,126 @@ STOPWORDS = frozenset([
 ])
 
 
+dashes_no_repeats = dashes[:]
+dashes_no_repeats.remove("--+")
+
+matching_dashes = dashes_no_repeats + ["-+"]
+
+word_with_alpha_and_period   = re.compile("^([^\.]+)(\.\s*)$")
+one_letter_long_or_repeating = re.compile("^(?:(?:[a-z])|(?:[a-z](?:\.[a-z])+))$", re.IGNORECASE)
+no_punctuation               = re.compile("^\w+$")
+left_quote_shifter           = re.compile(u"((`‘(?!`))|(‘(?!‘))\s*)(?=.*\w)", re.UNICODE)
+left_quote_converter         = re.compile(u'([«"“]\s*)(?=.*\w)', re.UNICODE)
+left_single_quote_converter  = re.compile(u"(?:(\W|^))('\s*)(?=.*\w)", re.UNICODE)
+right_single_quote_converter = re.compile(u"(['’]+)(?=\W|$)\s*", re.UNICODE)
+
+if sys.version_info >= (3,3):
+    repeated_dash_converter = re.compile("--+")
+    dash_converter = re.compile("|".join(dashes_no_repeats))
+else:
+    repeated_dash_converter = re.compile(u"--+")
+    dash_converter = re.compile(u"|".join(dashes_no_repeats))
+
+simple_dash_finder           = re.compile("(-\s*)")
+advanced_dash_finder         = re.compile("(" + "|".join(matching_dashes) + ")\s*")
+multi_single_quote_finder    = re.compile("('{2,})\s*")
+url_file_finder              = re.compile("(?:[-a-zA-Z0-9@%._\+~#=]{2,256}://)?"
+                                          "(?:www\.)?[-a-zA-Z0-9@:%\._\+~#=]{2,"
+                                          "256}\.[a-z]{2,6}[-a-zA-Z0-9@:%_\+.~#"
+                                          "?&//=]*\s*")
+numerical_expression         = re.compile(u"(\d+(?:,\d+)*(?:\.\d+)*(?![a-zA-ZÀ-ż])\s*)")
+remaining_quote_converter    = re.compile(u'(.)(?=["“”»])')
+shifted_ellipses             = re.compile("([\.\!\?¿¡]{2,})\s*")
+shifted_standard_punctuation = re.compile(u"([\(\[\{\}\]\)\!¡\?¿#\$%;~&+=<>|/:,—…])\s*")
+period_mover                 = re.compile(u"([a-zA-ZÀ-ż]{2})([\./])\s+([a-zA-ZÀ-ż]{2})")
+pure_whitespace              = re.compile("\s+")
+english_specific_appendages = re.compile(u"(\w)(?=['’]([dms])\\b)", re.UNICODE)
+english_nots = re.compile(u"(.)(?=n['’]t\\b)", re.UNICODE)
+english_contractions = re.compile(u"(.)(?=['’](ve|ll|re)\\b)")
+french_appendages = re.compile(u"(\\b[tjnlsmdclTJNLSMLDC]|qu)['’](?=[^tdms])")
+word_with_period = re.compile("[^\s\.]+\.{0,1}")
+
+def strip_word_with_alpha_and_period(s):
+    s = to_unicode(s)
+    return word_with_alpha_and_period.sub(" ", s)
+
+def strip_one_letter_long_or_repeating(s):
+    s = to_unicode(s)
+    return one_letter_long_or_repeating.sub(" ", s)
+
+def strip_no_punctuation(s):
+    s = to_unicode(s)
+    return no_punctuation.sub(" ", s)
+
+def strip_left_quote_shifter(s):
+    s = to_unicode(s)
+    return left_quote_shifter.sub(" ", s)
+
+def strip_left_quote_converter(s):
+    s = to_unicode(s)
+    return left_quote_converter.sub(" ", s)
+
+def strip_left_single_quote_converter(s):
+    s = to_unicode(s)
+    return left_single_quote_converter.sub(" ", s)
+
+def strip_right_single_quote_converter(s):
+    s = to_unicode(s)
+    return right_single_quote_converter.sub(" ", s)
+
+def strip_repeated_dash_converter(s):
+    s = to_unicode(s)
+    return repeated_dash_converter.sub(" ", s)
+
+def strip_dash_converter(s):
+    s = to_unicode(s)
+    return dash_converter.sub(" ", s)
+
+def strip_simple_dash_finder(s):
+    s = to_unicode(s)
+    return simple_dash_finder.sub(" ", s)
+
+def strip_advanced_dash_finder(s):
+    s = to_unicode(s)
+    return advanced_dash_finder.sub(" ", s)
+
+def strip_multi_single_quote_finder(s):
+    s = to_unicode(s)
+    return multi_single_quote_finder.sub(" ", s)
+
+def strip_shifted_ellipses(s):
+    s = to_unicode(s)
+    return shifted_ellipses.sub(" ", s)
+
+def strip_shifted_standard_punctuation(s):
+    s = to_unicode(s)
+    return shifted_standard_punctuation.sub(" ", s)
+
+def strip_period_mover(s):
+    s = to_unicode(s)
+    return period_mover.sub(" ", s)
+
+def strip_pure_whitespace(s):
+    s = to_unicode(s)
+    return pure_whitespace.sub(" ", s)
+
+def strip_english_specific_appendages(s):
+    s = to_unicode(s)
+    return english_specific_appendages.sub(" ", s)
+
+def strip_english_nots(s):
+    s = to_unicode(s)
+    return english_nots.sub(" ", s)
+
+def strip_english_contractions(s):
+    s = to_unicode(s)
+    return english_contractions.sub(" ", s)
+
+def strip_word_with_period(s):
+    s = to_unicode(s)
+    return word_with_period.sub(" ", s)
+
+
 RE_PUNCT = re.compile(r'([%s])+' % re.escape(string.punctuation), re.UNICODE)
 RE_TAGS = re.compile(r"<([^>]+)>", re.UNICODE)
 RE_NUMERIC = re.compile(r"[0-9]+", re.UNICODE)
@@ -47,6 +230,7 @@ RE_NONALPHA = re.compile(r"\W", re.UNICODE)
 RE_AL_NUM = re.compile(r"([a-z]+)([0-9]+)", flags=re.UNICODE)
 RE_NUM_AL = re.compile(r"([0-9]+)([a-z]+)", flags=re.UNICODE)
 RE_WHITESPACE = re.compile(r"(\s)+", re.UNICODE)
+
 
 def to_unicode(text, encoding='utf8', errors='strict'):
 
@@ -193,6 +377,11 @@ class Corpus(object):
             for f in filters:
                 s = f(s)
         return s.split()
+
+if __name__ == '__main__':
+   
+
+    print('finished')
 
 
   

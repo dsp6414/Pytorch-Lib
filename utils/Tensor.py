@@ -33,6 +33,8 @@ def is_torch_data_type(x):
     return isinstance(x, (torch.tensor._TensorBase, Variable))
 
 def to_numpy(data):
+    if isinstance(data, list) or isinstance(data, tuple):
+        return np.array(data)
     if isinstance(data, np.ndarray):
         return data
     if isinstance(data, torch._TensorBase):
@@ -42,13 +44,15 @@ def to_numpy(data):
 
 
 def to_tensor(data, cuda=False,dtype=None):
+    if isinstance(data, list) or isinstance(data, tuple):
+        data=to_numpy(data)
     if isinstance(data, np.ndarray):
         tensor = torch.from_numpy(data)
     if isinstance(data, torch._TensorBase):
         tensor = data
     if isinstance(data, torch.autograd.Variable):
         tensor = data.data
-    if type is not None:
+    if dtype is not None:
         tensor.type(dtype)
     if cuda:
         tensor = tensor.cuda()
@@ -56,6 +60,8 @@ def to_tensor(data, cuda=False,dtype=None):
 
 
 def to_variable(data):
+    if isinstance(data, list) or isinstance(data, tuple):
+        return to_variable(to_numpy(data))
     if isinstance(data, np.ndarray):
         return to_variable(to_tensor(data))
     if isinstance(data, torch._TensorBase):
@@ -64,6 +70,66 @@ def to_variable(data):
         return data
     else:
         raise ValueError("UnKnow data type: %s, input should be {np.ndarray,Tensor,Variable}" %type(data))
+
+#def to_tensor(X, device):
+#    """Turn to torch tensor.
+#    Handles the cases:
+#      * PackedSequence
+#      * numpy array
+#      * torch Tensor
+#      * list or tuple of one of the former
+#      * dict of one of the former
+#    """
+#    assert not isinstance(device, bool), (
+#        "possible bug: used `device` parameter like `use_cuda`. "
+#        "Set `device='cuda'` instead.")
+#    to_tensor_ = partial(to_tensor, device=device)
+
+#    if isinstance(X, nn.utils.rnn.PackedSequence):
+#        return X
+
+#    if isinstance(X, dict):
+#        return {key: to_tensor_(val) for key, val in X.items()}
+
+#    if isinstance(X, (list, tuple)):
+#        return [to_tensor_(x) for x in X]
+
+#    if isinstance(X, np.ndarray):
+#        X = torch.tensor(X)
+
+#    if np.isscalar(X):
+#        # ugly work-around - torch constructor does not accept np scalars
+#        X = torch.tensor(np.array([X]))[0]
+
+#    if isinstance(X, Sequence):
+#        X = torch.tensor(np.array(X))
+
+#    if not is_torch_data_type(X):
+#        raise TypeError("Cannot convert this data type to a torch tensor.")
+
+#    return X.to(device)
+
+
+#def to_numpy(X):
+#    """Generic function to convert a pytorch tensor to numpy.
+#    Returns X when it already is a numpy array.
+#    """
+#    if isinstance(X, np.ndarray):
+#        return X
+
+#    if is_pandas_ndframe(X):
+#        return X.values
+
+#    if not is_torch_data_type(X):
+#        raise TypeError("Cannot convert this data type to a numpy array.")
+
+#    if X.is_cuda:
+#        X = X.cpu()
+
+#    if X.requires_grad:
+#        X = X.detach()
+
+#    return X.numpy()
 
 def shuffle(*arrays, **kwargs):
 

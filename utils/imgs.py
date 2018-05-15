@@ -14,6 +14,8 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, TensorDataset
 import torch
 import files
+import math
+irange = range
 
 
 IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm']
@@ -50,6 +52,9 @@ if pil_image is not None:
     # This method is new in version 1.1.3 (2013).
     if hasattr(pil_image, 'LANCZOS'):
         _PIL_INTERPOLATION_METHODS['lanczos'] = pil_image.LANCZOS
+
+def is_image_file(filename,ext): #判断是否是图像文件
+    return any(filename.endswith(extension) for extension in ext)
 
 
 def normalize(x, axis=-1, order=2): #归一化
@@ -137,9 +142,18 @@ def resize_array(x, size): #转换arr尺寸
     res /= 255.0
     return res
 
+def image_loader(image_name, max_sz=256):
+    """ forked from pytorch tutorials """
+    r_image = Image.open(image_name)
+    mindim = np.min((np.max(r_image.size[:2]), max_sz))
 
-def is_image_file(filename,ext): #判断是否是图像文件
-    return any(filename.endswith(extension) for extension in ext)
+    loader = transforms.Compose([transforms.CenterCrop(mindim),
+                                 transforms.ToTensor()])
+
+    image = Variable(loader(r_image))
+
+    return image.unsqueeze(0)
+
 
 def load_image(path):
     image = Image.open(path)
@@ -200,15 +214,15 @@ def normalize_feat_map(feat_map): #归一化热图
 
 def plot_img_arr(arr, fs=(6,6), title=None): #绘制arr 3D
     plt.figure(figsize=fs)
-    plt.imshow(arr.astype('uint8'))
+    plt.imshow(arr)
     plt.title(title)
     plt.show()
 
 
-def plot_img_4D_tensor(tensor,  nrow=8, padding=2,
-               normalize=False, range=None, scale_each=False, pad_value=0):
+def plot_heatmaps(tensor,  nrow=8, padding=2,
+               normalize=True, range=None, scale_each=False, pad_value=0):
     N,C,H,W = tensor.size()
-    tensor = tensor.view(N*C,1,H,W)
+    tensor = torch.sum(tensor, dim=1)
     grid =torchvision.utils.make_grid(tensor, nrow=nrow, padding=padding, pad_value=pad_value,
                      normalize=normalize, range=range, scale_each=scale_each)
     ndarr = grid.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
@@ -333,5 +347,92 @@ def plot_sample_preds_masks(fnames, inputs, preds, fs=(9,9),
         print(fnames[idx])
         img = tensor_to_arr(inputs[idx])
         plot_binary_mask_overlay(preds[idx], img, fs, fnames[idx])
+
+def img_make_grids(tensor,nrow=8, padding=2,
+              normalize=False, range=None, scale_each=False, pad_value=0):
+    """Make a grid of images.
+
+    Args:
+        tensor (Tensor or list): 4D mini-batch Tensor of shape (B x C x H x W)
+            or a list of images all of the same size.
+        nrow (int, optional): Number of images displayed in each row of the grid.
+            The Final grid size is (B / nrow, nrow). Default is 8.
+        padding (int, optional): amount of padding. Default is 2.
+        normalize (bool, optional): If True, shift the image to the range (0, 1),
+            by subtracting the minimum and dividing by the maximum pixel value.
+        range (tuple, optional): tuple (min, max) where min and max are numbers,
+            then these numbers are used to normalize the image. By default, min and max
+            are computed from the tensor.
+        scale_each (bool, optional): If True, scale each image in the batch of
+            images separately rather than the (min, max) over all images.
+        pad_value (float, optional): Value for the padded pixels.
+
+    Example:
+        See this notebook `here <https://gist.github.com/anonymous/bf16430f7750c023141c562f3e9f2a91>`_
+
+    """
+    if not (torch.is_tensor(tensor) or
+            (isinstance(tensor, list) and all(torch.is_tensor(t) for t in tensor))):
+        raise TypeError('tensor or list of tensors expected, got {}'.format(type(tensor)))
+
+    # if list of tensors, convert to a 4D mini-batch Tensor
+    if isinstance(tensor, list):
+        tensor = torch.stack(tensor, dim=0)
+
+    if tensor.dim() == 2:  # single image H x W
+        tensor = tensor.view(1, tensor.size(0), tensor.size(1))
+    if tensor.dim() == 3:  # single image
+        if tensor.size(0) == 1:  # if single-channel, convert to 3-channel
+            tensor = torch.cat((tensor, tensor, tensor), 0)
+        tensor = tensor.view(1, tensor.size(0), tensor.size(1), tensor.size(2))
+    if tensor.dim() == 4 and tensor.size(1) !=1 and tensor.size(1) !=3 :  
+        tensor = torch.sum(tensor, dim=1,keepdim=True)
+
+    if tensor.dim() == 4 and tensor.size(1) == 1:  # single-channel images
+        tensor = torch.cat((tensor, tensor, tensor), 1)
+
+
+
+    if normalize is True:
+        tensor = tensor.clone()  # avoid modifying tensor in-place
+        if range is not None:
+            assert isinstance(range, tuple), \
+                "range has to be a tuple (min, max) if specified. min and max are numbers"
+
+        def norm_ip(img, min, max):
+            img.clamp_(min=min, max=max)
+            img.add_(-min).div_(max - min + 1e-5)
+
+        def norm_range(t, range):
+            if range is not None:
+                norm_ip(t, range[0], range[1])
+            else:
+                norm_ip(t, float(t.min()), float(t.max()))
+
+        if scale_each is True:
+            for t in tensor:  # loop over mini-batch dimension
+                norm_range(t, range)
+        else:
+            norm_range(tensor, range)
+
+    if tensor.size(0) == 1:
+        return tensor.squeeze()
+
+    # make the mini-batch of images into a grid
+    nmaps = tensor.size(0)
+    xmaps = min(nrow, nmaps)
+    ymaps = int(math.ceil(float(nmaps) / xmaps))
+    height, width = int(tensor.size(2) + padding), int(tensor.size(3) + padding)
+    grid = tensor.new(3, height * ymaps + padding, width * xmaps + padding).fill_(pad_value)
+    k = 0
+    for y in irange(ymaps):
+        for x in irange(xmaps):
+            if k >= nmaps:
+                break
+            grid.narrow(1, y * height + padding, height - padding)\
+                .narrow(2, x * width + padding, width - padding)\
+                .copy_(tensor[k])
+            k = k + 1
+    return grid
 
 

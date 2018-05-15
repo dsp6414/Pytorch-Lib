@@ -124,6 +124,7 @@ if __name__ == '__main__':
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                               batch_size=batch_size,
                                               shuffle=False)
+    model =Net()
     if torch.cuda.is_available():
         model.cuda()
 
@@ -147,7 +148,7 @@ if __name__ == '__main__':
     #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
-    trainer = Trainer(model,optimizer,train_loader,test_loader)
+    trainer = Trainer(model,optimizer,train_loader,test_loader,use_cuda=True)
     for epoch in range(1, 5):
         scheduler.step()
         trainer.train(epoch)

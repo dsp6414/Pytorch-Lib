@@ -37,6 +37,7 @@ class Net(nn.Module):
 
 if __name__=="__main__":
 
+    from torchvision.transforms import RandomSizedCrop
    
     file_name='.\\data\\IMG20160909202211.jpg'
     file_path_name = os.path.abspath(file_name)

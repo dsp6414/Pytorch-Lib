@@ -13,6 +13,19 @@ from smart_open import smart_open
 def F_file_exists(fname): #文件是否存在
     return os.path.exists(fname)
 
+def file_exists(filename):
+    return os.path.isfile(filename)
+
+def mkdir_if_missing(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+def is_path_exists(pathname):                                                                                                                                                                          
+  try:
+    return isinstance(pathname, str) and pathname and os.path.exists(pathname) 
+  except OSError:
+    return False
+
 def F_file_or_filename(input): #打开文件
 
     if isinstance(input, str):
