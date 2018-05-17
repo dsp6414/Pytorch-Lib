@@ -37,40 +37,46 @@ class Net(nn.Module):
 
 if __name__=="__main__":
 
-    from torchvision.transforms import RandomSizedCrop
+    #from torchvision.transforms import RandomSizedCrop
    
-    file_name='.\\data\\IMG20160909202211.jpg'
-    file_path_name = os.path.abspath(file_name)
-    IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm']
+    #file_name='.\\data\\IMG20160909202211.jpg'
+    #file_path_name = os.path.abspath(file_name)
+    #IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm']
 
-    if file_exists(file_path_name) and is_image_file(file_path_name,IMG_EXTENSIONS):
-        img=load_img_as_arr(file_path_name)
-        plot_img_arr(img)
+    #if file_exists(file_path_name) and is_image_file(file_path_name,IMG_EXTENSIONS):
+    #    img=load_img_as_arr(file_path_name)
+    #    plot_img_arr(img)
 
-    batch_size = 1
+    #batch_size = 1
 
-    # MNIST Dataset
-    train_dataset = datasets.MNIST(root='./mnist',
-                                   train=True,
-                                   transform=transforms.ToTensor(),
-                                   download=False)
+    ## MNIST Dataset
+    #train_dataset = datasets.MNIST(root='./mnist',
+    #                               train=True,
+    #                               transform=transforms.ToTensor(),
+    #                               download=False)
  
 
-    # Data Loader (Input Pipeline)
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=batch_size,
-                                               shuffle=True)
+    ## Data Loader (Input Pipeline)
+    #train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+    #                                           batch_size=batch_size,
+    #                                           shuffle=True)
 
-    model = Net()    
+    #model = Net()    
 
-    for data,label in train_loader:
-        break
-    data,label = Variable(data), Variable(label)
-    _,tensor1,tensor2 = model(data)
+    #for data,label in train_loader:
+    #    break
+    #data,label = Variable(data), Variable(label)
+    #_,tensor1,tensor2 = model(data)
     
-    plot_img_4D_tensor(tensor1.data,nrow=6,padding=0,scale_each=True,normalize=True)
-    plot_img_4D_tensor(tensor2.data,nrow=6,padding=0,scale_each=True,normalize=True)
-    plot_img_4D_tensor(model.conv1.weight.data,nrow=6,padding=0,scale_each=True,normalize=True)
+
+    model = torchvision.models.vgg13_bn()
+    for child in model.children():
+        print(child)
+    new_model = nn.Sequential(*list(model.features.children())[:-3])
+    for child in new_model.children():
+        print(child)
+
+
 
 
     print('finished')

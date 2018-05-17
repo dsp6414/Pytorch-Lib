@@ -1,6 +1,6 @@
 import _init_paths
 
-import utils
+#import utils
 from utils.Text import *
 
 import numpy as np

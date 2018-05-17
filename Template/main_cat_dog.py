@@ -23,7 +23,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 import utils
-#from utils.Tensor import to_variable,to_numpy
+from utils.Tensor import to_variable,to_numpy
 from utils.metric import AccuracyMeter,MovingAverageMeter,AverageMeter
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -96,7 +96,7 @@ def print_msg(proc,epoch,loss,acc):
     print('proc={},epoch={}:loss={},acc={}'.format(proc,epoch,loss,acc))
 
 if __name__ == '__main__':
-    train_batch_size=32
+    train_batch_size=40
 
     ROOT_DIR = os.getcwd()
     DATA_HOME_DIR = ROOT_DIR + '/data/cat_dog'
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     model = models.resnet50(pretrained=True)  
     for param in model.parameters():
             param.requires_grad = False
-    #model.fc = nn.Linear(512,2) #resnet34
+    #model.fc = nn.Linear(512,2)
     model.fc = nn.Linear(2048,2)
     #optimizer = optim.Adam(model.parameters(), lr=1e-4)
     optimizer = optim.Adam(model.fc.parameters(), lr=1e-4, weight_decay=1e-4)
@@ -125,15 +125,15 @@ if __name__ == '__main__':
         model.cuda()
     
      #optimizer = optim.Adam(model.module.fc.parameters(), lr=1e-3)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.85)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
     trainer = Trainer(model=model,optimizer=optimizer,train_loader=train_loader,valid_loader=valid_loader,use_cuda=True)
-    epochs = 50
+    epochs = 30
     train_loss_epochs=np.zeros((epochs,))
     train_acc_epochs=np.zeros((epochs,))
     test_loss_epochs=np.zeros((epochs,))
     test_acc_epochs=np.zeros((epochs,))
     i=0
-    for epoch in range(1, 10):
+    for epoch in range(1, epochs+1):
         scheduler.step()
         train_loss, train_acc=trainer.train(epoch)
         train_loss_epochs[i]=train_loss

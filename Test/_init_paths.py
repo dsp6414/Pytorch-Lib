@@ -32,6 +32,9 @@ datasets_path = osp.join(parent_dir, 'datasets')
 add_path(datasets_path)
 optim_path = osp.join(parent_dir, 'optim')
 add_path(optim_path)
+checkpoint_path = osp.join(parent_dir, 'checkpoint')
+add_path(checkpoint_path)
+
 
 
 add_path(parent_dir)
