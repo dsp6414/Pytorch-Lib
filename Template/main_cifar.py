@@ -1,4 +1,4 @@
-import _init_paths
+#import _init_paths
 
 import os
 
@@ -17,7 +17,6 @@ from data_loader.cifar_loader import cifar_loader
 import utils
 from utils.metric import AccuracyMeter,AverageMeter
 import net_utils
-from net_utils.netutils import save_model_checkpoint
 from net_utils.layers import Flatten,set_unfreeze_layers_params,set_module_params,clip_gradient_norm
 from net_utils.layers import Layer_Classifier
 import Template

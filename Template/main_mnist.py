@@ -17,7 +17,6 @@ from data_loader.mnist_loader import mnist_loader
 import utils
 from utils.metric import AccuracyMeter,AverageMeter
 import net_utils
-from net_utils.netutils import save_model_checkpoint
 from net_utils.layers import Flatten,set_unfreeze_layers_params,set_module_params,clip_gradient_norm
 from net_utils.layers import Layer_Classifier
 import checkpoint
@@ -173,7 +172,7 @@ def main():
         test_loss_epochs[i]=test_loss
         test_acc_epochs[i]=test_acc
         trainer.print_msg('test',i,test_loss,test_acc)
-        checkpointer.save_checkpoint(i,test_loss,test_acc)
+        checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
         i+=1
     
     #固定层，调整剩余的层
@@ -195,7 +194,7 @@ def main():
         test_loss_epochs[i]=test_loss
         test_acc_epochs[i]=test_acc
         trainer.print_msg('test',i,test_loss,test_acc)
-        checkpointer.save_checkpoint(i,test_loss,test_acc)
+        checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
         i+=1
          
     #调整指定的层的参数
@@ -219,7 +218,7 @@ def main():
         test_loss_epochs[i]=test_loss
         test_acc_epochs[i]=test_acc
         trainer.print_msg('test',i,test_loss,test_acc)
-        checkpointer.save_checkpoint(i,test_loss,test_acc)
+        checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
         i+=1
 
         checkpointer.load_checkpoint(epoch=2)
@@ -239,7 +238,7 @@ def main():
             test_loss_epochs[i]=test_loss
             test_acc_epochs[i]=test_acc
             trainer.print_msg('test',i,test_loss,test_acc)
-            checkpointer.save_checkpoint(i,test_loss,test_acc)
+            checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
             i+=1
 
     data ={'train_loss':train_loss_epochs,'train_acc':train_acc_epochs,'test_loss':test_loss_epochs,'test_acc':test_acc_epochs}
