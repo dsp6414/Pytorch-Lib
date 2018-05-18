@@ -37,9 +37,9 @@ class CheckPoints():
         checkpoint["test_loss"] = test_loss
         checkpoint["test_acc"] = test_acc
         torch.save(checkpoint,  os.path.join(self.storage_directory, "model-epoch-{}.chkpt".format(epoch)))
-        if save_best and acc>self.best_acc:
+        if save_best and test_acc>self.best_acc:
             torch.save(checkpoint,  os.path.join(self.storage_directory, "model-best.chkpt"))
-            self.best_acc = acc
+            self.best_acc = test_acc
 
     def load_checkpoint(self,epoch):
         print("loading model...epoch={}".format(epoch))
@@ -58,9 +58,13 @@ class CheckPoints():
         checkpoint_path_name =  os.path.join(self.storage_directory, file_name)
         checkpoint = torch.load(checkpoint_path_name)
         self.net.load_state_dict(checkpoint["state_dict"])
-        self.epoch = checkpoint["epoch"]
-        self.loss = checkpoint["loss"]
-        self.acc = checkpoint["acc"]
+        epoch = checkpoint["epoch"]
+        train_loss= checkpoint["train_loss"]  
+        train_acc = checkpoint["train_acc"]  
+        test_loss = checkpoint["test_loss"]  
+        test_acc = checkpoint["test_acc"] 
+        return epoch,train_loss,train_acc,test_loss,test_acc
+
 
     def _get_filepaths_and_filenames(root, file_ext=None, topdown=True,sort=True, strip_ext=False):
         filepaths = []
