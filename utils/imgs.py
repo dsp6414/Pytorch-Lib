@@ -271,7 +271,7 @@ def plot_meanstd_normed_tensor(tns, mean, std, fs=(6,6), title=None):
 
 
 def get_mean_std_of_dataset(dir_path, sample_size=5):
-    fpaths, fnames = files.F_get_filepaths_and_filenames(dir_path)
+    fpaths, fnames = files.get_filepaths_and_filenames(dir_path)
     random.shuffle(fpaths)
     total_mean = np.array([0.,0.,0.])
     total_std = np.array([0.,0.,0.])
