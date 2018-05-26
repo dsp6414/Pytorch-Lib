@@ -17,10 +17,9 @@ from data_loader.mnist_loader import mnist_loader
 import utils
 from utils.metric import AccuracyMeter,AverageMeter
 import net_utils
+from net_utils.netutils import save_model_checkpoint
 from net_utils.layers import Flatten,set_unfreeze_layers_params,set_module_params,clip_gradient_norm
 from net_utils.layers import Layer_Classifier
-import checkpoint
-from checkpoint.CheckPoints import CheckPoints
 from torchvision.models.resnet import resnet34
 
 
@@ -152,15 +151,14 @@ def main():
     model =Net(num_classes=10)
     if args.use_cuda:
         model.cuda()
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr,weight_decay=args.weight_decay,momentum=args.momentum)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
     trainer = Trainer(model,optimizer,train_loader,test_loader,args=args)
-    checkpointer=CheckPoints(model,'./data/checkpoint')
-    epochs=40
-    train_loss_epochs=np.zeros((200,))
-    train_acc_epochs=np.zeros((200,))
-    test_loss_epochs=np.zeros((200,))
-    test_acc_epochs=np.zeros((200,))
+    epochs=1
+    train_loss_epochs=np.zeros((20,))
+    train_acc_epochs=np.zeros((20,))
+    test_loss_epochs=np.zeros((20,))
+    test_acc_epochs=np.zeros((20,))
     i=0
     for epoch in range(1,epochs+1):
         scheduler.step()
@@ -172,7 +170,6 @@ def main():
         test_loss_epochs[i]=test_loss
         test_acc_epochs[i]=test_acc
         trainer.print_msg('test',i,test_loss,test_acc)
-        #checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
         i+=1
     
     #固定层，调整剩余的层
@@ -194,7 +191,6 @@ def main():
         test_loss_epochs[i]=test_loss
         test_acc_epochs[i]=test_acc
         trainer.print_msg('test',i,test_loss,test_acc)
-        checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
         i+=1
          
     #调整指定的层的参数
@@ -218,29 +214,7 @@ def main():
         test_loss_epochs[i]=test_loss
         test_acc_epochs[i]=test_acc
         trainer.print_msg('test',i,test_loss,test_acc)
-        checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
         i+=1
-
-    checkpointer.load_checkpoint(epoch=2)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
-    trainer = Trainer(model,optimizer,train_loader,test_loader,args=args)
-
-    epochs=2
-
-    for epoch in range(1,epochs+1):
-        scheduler.step()
-        train_loss, train_acc=trainer.train(i)
-        train_loss_epochs[i]=train_loss
-        train_acc_epochs[i]=train_acc
-        trainer.print_msg('train',i,train_loss,train_acc)
-        test_loss, test_acc=trainer.validate(i)
-        test_loss_epochs[i]=test_loss
-        test_acc_epochs[i]=test_acc
-        trainer.print_msg('test',i,test_loss,test_acc)
-        checkpointer.save_checkpoint(i,train_loss,train_acc,test_loss,test_acc,save_best=True)
-        i+=1
-
     data ={'train_loss':train_loss_epochs,'train_acc':train_acc_epochs,'test_loss':test_loss_epochs,'test_acc':test_acc_epochs}
     torch.save(data,'./data/Template/data.pt')
     print('Finished...')

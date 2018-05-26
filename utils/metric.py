@@ -7,11 +7,75 @@ import contextlib
 import torch.nn.functional as F
 import torch.distributions as D
 from torch.autograd import Variable
-import os.path
-import matplotlib.pyplot as plt
-from sklearn.metrics import fbeta_score
-from sklearn import metrics as scipy_metrics
 
+import matplotlib.pyplot as plt
+
+#from sklearn import metrics as scipy_metrics
+
+
+
+is_scalar = lambda t: torch.is_tensor(t) and len(t.size()) == 0
+
+def torch_equals_ignore_index(tensor, tensor_other, ignore_index=None):
+    """
+    Compute ``torch.equal`` with the optional mask parameter.
+
+    Args:
+        ignore_index (int, optional): Specifies a ``tensor`` index that is ignored.
+
+    Returns:
+        (bool) Returns ``True`` if target and prediction are equal.
+    """
+    if ignore_index is not None:
+        assert tensor.size() == tensor_other.size()
+        mask_arr = tensor.ne(ignore_index)
+        tensor = tensor.masked_select(mask_arr)
+        tensor_other = tensor_other.masked_select(mask_arr)
+
+    return torch.equal(tensor, tensor_other)
+
+def get_accuracy(targets, outputs, k=1, ignore_index=None):
+    """ Get the accuracy top-k accuracy between two tensors.
+
+    Args:
+      targets (1 - 2D :class:`torch.Tensor`): Target or true vector against which to measure
+          saccuracy
+      outputs (1 - 3D :class:`torch.Tensor`): Prediction or output vector
+      ignore_index (int, optional): Specifies a target index that is ignored
+
+    Returns:
+      :class:`tuple` consisting of accuracy (:class:`float`), number correct (:class:`int`) and
+      total (:class:`int`)
+
+    Example:
+
+        >>> import torch
+        >>> from torchnlp.metrics import get_accuracy
+        >>> targets = torch.LongTensor([1, 2, 3, 4, 5])
+        >>> outputs = torch.LongTensor([1, 2, 2, 3, 5])
+        >>> accuracy, n_correct, n_total = get_accuracy(targets, outputs, ignore_index=3)
+        >>> accuracy
+        0.8
+        >>> n_correct
+        4
+        >>> n_total
+        5
+    """
+    n_correct = 0.0
+    for target, output in zip(targets, outputs):
+        if not torch.is_tensor(target) or is_scalar(target):
+            target = torch.LongTensor([target])
+
+        if not torch.is_tensor(output) or is_scalar(output):
+            output = torch.LongTensor([[output]])
+
+        predictions = output.topk(k=min(k, len(output)), dim=0)[0]
+        for prediction in predictions:
+            if torch_equals_ignore_index(target, prediction, ignore_index=ignore_index):
+                n_correct += 1
+                break
+
+    return n_correct / len(targets), n_correct, len(targets)
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -64,7 +128,7 @@ class AccumulatedAccuracyMetric(Metric):
         self.correct = 0
         self.total = 0
 
-    def __call__(self, outputs, target, loss):
+    def __call__(self, outputs, target):
         pred = outputs[0].data.max(1, keepdim=True)[1]
         self.correct += pred.eq(target[0].data.view_as(pred)).cpu().sum()
         self.total += target[0].size(0)

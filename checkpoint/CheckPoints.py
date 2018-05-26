@@ -37,7 +37,7 @@ class CheckPoints():
         checkpoint["train_acc"] = train_acc
         checkpoint["test_loss"] = test_loss
         checkpoint["test_acc"] = test_acc
-        torch.save(checkpoint,  os.path.join(self.storage_directory, "model-epoch-{}.chkpt".format(epoch)))
+        #torch.save(checkpoint,  os.path.join(self.storage_directory, "model-epoch-{}.chkpt".format(epoch)))
         if save_best and test_acc>self.best_acc:
             torch.save(checkpoint,  os.path.join(self.storage_directory, "model-best.chkpt"))
             self.best_acc = test_acc
