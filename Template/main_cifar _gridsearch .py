@@ -103,7 +103,7 @@ class Trainer(object):
 
             self.optimizer.zero_grad()
             loss.backward()
-            clip_grad_norm(self.model.parameters(), max_norm=0.2) #防止梯度爆炸
+            clip_grad_norm(self.optimizer, max_norm=0.2) #防止梯度爆炸
             self.optimizer.step()
 
             train_loss.update(float(loss.data), x.size(0))

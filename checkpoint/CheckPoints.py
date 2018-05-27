@@ -86,24 +86,22 @@ class CheckPoints():
 
 
 
-def load_state_dict_from_source(self, source_state):  #加载权值
-    new_dict = OrderedDict()
-    for k, v in self.net.state_dict().items():
-        if k in source_state and v.size() == source_state[k].size():
-            new_dict[k] = source_state[k]
-        else:
-            new_dict[k] = v
-    self.net.load_state_dict(new_dict)
+    def load_state_dict_from_source(self, source_state):  #加载权值
+        new_dict = OrderedDict()
+        for k, v in self.net.state_dict().items():
+            if k in source_state and v.size() == source_state[k].size():
+                new_dict[k] = source_state[k]
+            else:
+                new_dict[k] = v
+        self.net.load_state_dict(new_dict)
 
 
-def load_sub_modules_from_pretrained(self,pretraind_sub_modules_list,model_sub_modules_list):
-    for p,m in zip(pretraind_sub_modules_list,model_sub_modules_list):
-        for param_p,param_m in zip(p.parameters(),m.parameters()):
-            assert_equal(param_p.size(),param_m.size())
-        m.load_state_dict(p.state_dict())
+    def load_sub_modules_from_pretrained(self,pretraind_sub_modules_list,model_sub_modules_list):
+        for p,m in zip(pretraind_sub_modules_list,model_sub_modules_list):
+            for param_p,param_m in zip(p.parameters(),m.parameters()):
+                assert_equal(param_p.size(),param_m.size())
+            m.load_state_dict(p.state_dict())
 
-def get_requires_grad_params(model):   
-    model_params = filter(lambda p: p.requires_grad, model.parameters())   
-    return model_params
+
 
 
