@@ -38,6 +38,19 @@ def get_features(x):
     return num_features
 
 
+class BWtoRGB(nn.Module):
+    def __init__(self):
+        super(BWtoRGB, self).__init__()
+
+    def forward(self, x):
+        assert len(list(x.size())) == 4
+        chans = x.size(1)
+        if chans < 3:
+            return torch.cat([x, x, x], 1)
+        else:
+            return x
+
+
 class Layer_normalization(nn.Module):
 
     def __init__(self, features, epsilon=1e-8):
@@ -49,11 +62,98 @@ class Layer_normalization(nn.Module):
         self.epsilon = epsilon
         self.gamma = nn.Parameter(torch.ones(features))
         self.beta = nn.Parameter(torch.zeros(features))
-
     def forward(self, x):
         mean = x.mean(-1, keepdim=True)
         std = x.std(-1, keepdim=True)
         return self.gamma * (x - mean) / (std + self.epsilon) + self.beta
+
+class GatedConv2d(nn.Module):
+    '''from jmtomczak's github '''
+    def __init__(self, input_channels, output_channels, kernel_size,
+                 stride, padding=0, dilation=1, activation=None):
+        super(GatedConv2d, self).__init__()
+
+        self.activation = activation
+        self.sigmoid = nn.Sigmoid()
+
+        self.h = nn.Conv2d(input_channels, output_channels, kernel_size,
+                           stride=stride, padding=padding, dilation=dilation)
+        self.g = nn.Conv2d(input_channels, output_channels, kernel_size,
+                           stride=stride, padding=padding, dilation=dilation)
+
+    def forward(self, x):
+        if self.activation is None:
+            h = self.h(x)
+        else:
+            h = self.activation( self.h( x ) )
+
+        g = self.sigmoid( self.g( x ) )
+
+        return h * g
+
+class GatedConvTranspose2d(nn.Module):
+    ''' from jmtomczak's github'''
+    def __init__(self, input_channels, output_channels, kernel_size,
+                 stride, padding=0, dilation=1, activation=None):
+        super(GatedConvTranspose2d, self).__init__()
+
+        self.activation = activation
+        self.sigmoid = nn.Sigmoid()
+        self.h = nn.ConvTranspose2d(input_channels, output_channels, kernel_size,
+                                    stride=stride, padding=padding, dilation=dilation)
+        self.g = nn.ConvTranspose2d(input_channels, output_channels, kernel_size,
+                                    stride=stride, padding=padding, dilation=dilation)
+
+    def forward(self, x):
+        if self.activation is None:
+            h = self.h(x)
+        else:
+            h = self.activation( self.h( x ) )
+
+        g = self.sigmoid( self.g( x ) )
+
+        return h * g
+
+class SeparableConv2d(nn.Module):
+
+    def __init__(self, in_channels, out_channels, dw_kernel, dw_stride,
+                 dw_padding, bias=False):
+        super(SeparableConv2d, self).__init__()
+        self.depthwise_conv2d = nn.Conv2d(in_channels, in_channels, dw_kernel,
+                                          stride=dw_stride,
+                                          padding=dw_padding,
+                                          bias=bias,
+                                          groups=in_channels)
+        self.pointwise_conv2d = nn.Conv2d(in_channels, out_channels, 1,
+                                          stride=1, bias=bias)
+
+    def forward(self, x):
+        x = self.depthwise_conv2d(x)
+        x = self.pointwise_conv2d(x)
+        return x
+
+def str_to_activ_module(str_activ):
+    ''' Helper to return a tf activation given a str'''
+    str_activ = str_activ.strip().lower()
+    activ_map = {
+        'identity': Identity,
+        'elu': nn.ELU,
+        'sigmoid': nn.Sigmoid,
+        'log_sigmoid': nn.LogSigmoid,
+        'tanh': nn.Tanh,
+        'softmax': nn.Softmax,
+        'log_softmax': nn.LogSoftmax,
+        'selu': nn.SELU,
+        'relu': nn.ReLU,
+        'softplus': nn.Softplus,
+        'hardtanh': nn.Hardtanh,
+        'leaky_relu': nn.LeakyReLU,
+        'softsign': nn.Softsign
+    }
+
+    assert str_activ in activ_map, "unknown activation requested"
+    return activ_map[str_activ]
+
 
 def Conv_Relu(in_channels, out_channels, kernel_size=3, stride=1,
               padding=1, bias=True):
@@ -248,7 +348,8 @@ def cut_model(model, cut):
 
 import warnings
 
-def clip_grad_norm_(parameters, max_norm, norm_type=2):
+
+def clip_grad_norm_(optimizer, max_norm, norm_type=2):
     r"""Clips gradient norm of an iterable of parameters.
 
     The norm is computed over all gradients together, as if they were
@@ -264,7 +365,7 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2):
     Returns:
         Total norm of the parameters (viewed as a single vector).
     """
-    parameters = list(filter(lambda p: p.grad is not None, parameters))
+    parameters = [param for group in optimizer.param_groups for param in group['params'] if param.grad is not None ]
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if norm_type == float('inf'):
@@ -281,9 +382,7 @@ def clip_grad_norm_(parameters, max_norm, norm_type=2):
             p.grad.data.mul_(clip_coef)
     return total_norm
 
-
-
-def clip_grad_norm(parameters, max_norm=0.1, norm_type=2):
+def clip_grad_norm(optimizer, max_norm=0.1, norm_type=2):
     r"""Clips gradient norm of an iterable of parameters.
 
     .. warning::
@@ -292,10 +391,10 @@ def clip_grad_norm(parameters, max_norm=0.1, norm_type=2):
     """
     warnings.warn("torch.nn.utils.clip_grad_norm is now deprecated in favor "
                   "of torch.nn.utils.clip_grad_norm_.", stacklevel=2)
-    return clip_grad_norm_(parameters, max_norm, norm_type)
+    return clip_grad_norm_(optimizer, max_norm, norm_type)
 
 
-def clip_grad_value_(parameters, clip_value):
+def clip_grad_value_(optimizer, clip_value):
     r"""Clips gradient of an iterable of parameters at specified value.
 
     Gradients are modified in-place.
@@ -307,15 +406,15 @@ def clip_grad_value_(parameters, clip_value):
             The gradients are clipped in the range [-clip_value, clip_value]
     """
     clip_value = float(clip_value)
-    for p in filter(lambda p: p.grad is not None, parameters):
-        p.grad.data.clamp_(min=-clip_value, max=clip_value)
-
-
-def clip_gradient_optim(optimizer, grad_clip):
     for group in optimizer.param_groups:
         for param in group['params']:
             if param.grad is not None:
-                param.grad.data.clamp_(-grad_clip, grad_clip)
+                p.grad.data.clamp_(min=-clip_value, max=clip_value)
+
+
+def get_requires_grad_params(model):   
+    model_params = filter(lambda p: p.requires_grad, model.parameters())   
+    return model_params
 
 class PCA(nn.Module):
     def __init__(self, pca_model, scaler_model=None):

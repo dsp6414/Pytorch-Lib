@@ -17,6 +17,50 @@ import operator
 import warnings
 import six
 import numpy as np
+import pandas as pd
+
+def str2bool(v):
+
+    return v.lower() in ("yes", "true", "t", "1")
+
+def train_valid_split(dataset, test_size=0.25, shuffle=False, random_seed=0):
+
+    """ Return a list of splitted indices from a DataSet.
+    """
+
+    length = dataset.__len__()
+    indices = list(range(1, length))
+    if shuffle == True:
+        random.seed(random_seed)
+        random.shuffle(indices)
+    if type(test_size) is float:
+        split = floor(test_size * length)
+    elif type(test_size) is int:
+        split = test_size
+    else:
+        raise ValueError('%s should be an int or a float' % str)
+
+    return indices[split:], indices[:split]
+
+def find_classes(fullDir):
+    classes = [d for d in os.listdir(fullDir) if os.path.isdir(os.path.join(fullDir, d))]
+    classes.sort()
+    class_to_idx = {classes[i]: i for i in range(len(classes))}
+    num_to_class = dict(zip(range(len(classes)), classes))
+    train = []
+    for index, label in enumerate(classes):
+        path = fullDir + label + '/'
+        for file in listdir(path):
+            train.append(['{}/{}'.format(label, file), label, index])
+    df = pd.DataFrame(train, columns=['file', 'category', 'category_id', ])
+    return classes, class_to_idx, num_to_class, df
+
+def split_train_val(dataset, val_percent=0.05):
+    dataset = list(dataset)
+    length = len(dataset)
+    n = int(length * val_percent)
+    random.shuffle(dataset)
+    return {'train': dataset[:-n], 'val': dataset[-n:]}
 
 def check_random_state(seed):
     """Turn seed into a np.random.RandomState instance

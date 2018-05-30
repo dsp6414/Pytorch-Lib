@@ -15,7 +15,7 @@ import data_loader
 from data_loader.cifar_loader import cifar_loader
 
 import utils
-from utils.metric import AccuracyMeter,AverageMeter
+from utils.metric import AccuracyMeter,AverageMeter,get_accuracy
 import net_utils
 from net_utils.layers import Flatten,set_unfreeze_layers_params,set_module_params,clip_grad_norm
 from net_utils.layers import Layer_Classifier
@@ -103,16 +103,17 @@ class Trainer(object):
 
             self.optimizer.zero_grad()
             loss.backward()
-            clip_grad_norm(self.optimizer, max_norm=0.2) #防止梯度爆炸
+            clip_grad_norm(self.optimizer, max_norm=1) #防止梯度爆炸
             self.optimizer.step()
 
             train_loss.update(float(loss.data), x.size(0))
 
             y_pred = output.data.max(dim=1)[1]
-            correct = int(y_pred.eq(y.data).cpu().sum())
+            #correct = int(y_pred.eq(y.data).cpu().sum())
+            _,correct,_=get_accuracy(y.data,y_pred)
             train_acc.update(correct, x.size(0))
             if i % 100 ==0:
-                print('\nTrain Epoch/batch| [{}/{}]: Average train acc: {:.6f}\n'.format(epoch,i,train_acc.accuracy))
+                print('\nTrain Epoch/batch| [{}/{}]: Average batch loss:{:.6f},acc: {:.6f}\n'.format(epoch,i,train_loss.average,train_acc.accuracy))
 
         #save_model_checkpoint(self.model,epoch,self.save)
         return train_loss.average, train_acc.accuracy
@@ -137,7 +138,7 @@ class Trainer(object):
             y_pred = output.data.max(dim=1)[1]
             correct = int(y_pred.eq(y.data).cpu().sum())
             valid_acc.update(correct, x.size(0))
-        print('\nTrain Epoch [{}]: Average valid acc: {:.6f}\n'.format(epoch,valid_acc.accuracy))
+        print('\nTest Epoch [{}]: Average batch loss:{:.6f},acc: {:.6f}\n'.format(epoch,valid_loss.average,valid_acc.accuracy))
         return valid_loss.average, valid_acc.accuracy
 
     def print_msg(self,proc,epoch,loss,acc):

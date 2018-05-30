@@ -40,6 +40,24 @@ def file_or_filename(input): #打开文件
 def get_filename_from_fpath(fpath): #从全路径中得到文件名
     return os.path.basename(fpath)
 
+def get_fnames_from_fpaths(fpaths):
+    fnames = []
+    for f in fpaths:
+        if isinstance(f, tuple):
+            f = f[0]
+        fnames.append(os.path.basename(f))
+    return fnames
+
+def get_matching_files_in_dir(dirpath, regex):
+    fpaths = glob(os.path.join(dirpath,'*.*'))
+    match_objs, match_fpaths = [], []
+    for i in range(len(fpaths)):
+        match = re.search(regex, fpaths[i])
+        if match is not None:
+            match_objs.append(match)
+            match_fpaths.append(fpaths[i])
+    return match_objs, match_fpaths
+
 
 
 def get_filepaths_and_filenames(root, file_ext=None, topdown=True,sort=True, strip_ext=False): #得到给定目录包括子目录下，文件全路径和文件名
@@ -55,6 +73,17 @@ def get_filepaths_and_filenames(root, file_ext=None, topdown=True,sort=True, str
         return sorted(filepaths), sorted(fnames)
     return filepaths, fnames
 
+def write_lines(fpath, lines, compress=False):
+    lines_str = '\n'.join(lines)
+    if compress:
+        fpath += '.gz'
+        lines_str = str.encode(lines_str)
+        f = gzip.open(fpath, 'wb')
+    else:
+        f = open(fpath, 'w')
+    f.write(lines_str)
+    f.close()
+    return fpath
 
 def save_json(fpath, dict_): #保存为Json格式
     with open(fpath, 'w') as f:

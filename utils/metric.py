@@ -256,11 +256,11 @@ def get_metrics_in_batches(model, loader, thresholds, metrics):
     return metric_totals
 
 
-def get_accuracy(preds, targets):
-    preds = preds.flatten() 
-    targets = targets.flatten()
-    correct = np.sum(preds==targets)
-    return correct / len(targets)
+#def get_accuracy(preds, targets):
+#    preds = preds.flatten() 
+#    targets = targets.flatten()
+#    correct = np.sum(preds==targets)
+#    return correct / len(targets)
 
 
 def get_cross_entropy_loss(probs, targets):
